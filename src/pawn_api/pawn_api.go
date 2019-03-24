@@ -8,7 +8,12 @@ package pawn_api
 import "C"
 
 import (
+	"bytes"
 	"errors"
+	"io"
+	"os"
+	"regexp"
+	"syscall"
 	"unsafe"
 )
 
@@ -52,4 +57,46 @@ func RunPwn(src *SourceInfo) error {
 		return errors.New("amx file not start")
 	}
 	return nil
+}
+
+func GetStreamsOut(f func(src *SourceInfo) error, src *SourceInfo) (error, string) { // stdout, stderr capture
+	stdout_copy, _ := syscall.Dup(1)
+	r, w, _ := os.Pipe()
+	fd := w.Fd()
+	syscall.Dup2(int(fd), 1)
+
+	stderr_copy, _ := syscall.Dup(2)
+	r1, w1, _ := os.Pipe()
+	fd1 := w1.Fd()
+	syscall.Dup2(int(fd1), 2)
+
+	err := f(src)
+
+	w.Close()
+
+	syscall.Dup2(stdout_copy, 1)
+	//stdout_copy.Close()
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+
+	w1.Close()
+
+	syscall.Dup2(stderr_copy, 2)
+
+	var buff bytes.Buffer
+	io.Copy(&buff, r1)
+
+	out := buf.String() + buff.String()
+
+	re := regexp.MustCompile(`(?m)(\d+\s+(Error|Warning|Errors|Warnings)[.])`)
+
+	res := re.FindAllStringSubmatch(out, -1)
+	out = re.ReplaceAllString(out, "")
+
+	if cap(res) != 0 {
+		out += "\n" + res[0][0]
+	}
+	out = regexp.MustCompile(`(?m)^\s+\n$`).ReplaceAllString(out, "$1")
+	return err, out
 }
