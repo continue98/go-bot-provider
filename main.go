@@ -7,12 +7,12 @@ import (
 	"log"
 	"os"
 
+	config "./src/config"
 	pawn_api "./src/pawn_api"
 )
 
-// 	err_compile = pawn_api.CompileSrc(&src_info)
-
 func main() {
+	config.InitConfig()
 	current_dir, _ := os.Getwd()
 	src_info := pawn_api.SourceInfo{CurrentPath: current_dir, Name: "hello2", IncludeDir: current_dir + "/include"}
 	var err_compile error
