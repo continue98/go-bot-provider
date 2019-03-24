@@ -10,7 +10,7 @@ import (
 )
 
 type Config struct {
-	TokenVK int64
+	TokenVK string
 	ChatsID map[int64]int64
 }
 
@@ -35,6 +35,7 @@ func InitConfig() {
 	for k, v := range chats_ids {
 		config.ChatsID[int64(v.(int))] = int64(k)
 	}
+	config.TokenVK = viper.Get("vk_api_token").(string)
 }
 func CreateConfig() {
 	var config_content = []byte(`vk_api_token : token
